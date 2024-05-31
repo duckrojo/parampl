@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "parampl"
+version = "0.1.0"
+description = ""
+authors = ["duckrojo <3063609+duckrojo@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+matplotlib = "^3.9.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
