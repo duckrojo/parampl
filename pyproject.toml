@@ -7,6 +7,13 @@ version = "0.0.0"
 #documentation = "https://parampl.readthedocs.io/en/latest/"
 repository = "https://github.com/duckrojo/parampl"
 
+[tool.poetry-dynamic-versioning]
+enable = true
+
+
+[tool.poetry-dynamic-versioning.substitution]
+
+
 
 [tool.poetry.dependencies]
 python = "^3.12"

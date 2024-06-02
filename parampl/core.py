@@ -1,9 +1,6 @@
 from matplotlib import pyplot as plt
 
-from parampl.statics import split_into_paragraphs, parse_avoid
-
-vertical_lims = tuple[float, float]
-avoid_specification = tuple[float, vertical_lims]
+from parampl.statics import split_into_paragraphs, parse_avoid, avoid_specification
 
 
 class ParaMPL:
@@ -241,10 +238,10 @@ et quam. Nam ut gravida libero, quis dapibus ante. Nam orci nisi, vehicula at mi
                avoid_left_of=[(0.4, (0.2, 0.4)),
                               (0.2, (0, 0.7)),
                               ],
-               avoid_right_of=[(0.8, (0.6, 0.5)),
+               avoid_right_of=[(0.8, (0.7, 0.5)),
                                (0.7, (0, 0.2)),
                                ],
-               width=test_width, justify='center')
+               width=test_width, justify='full')
     # , justify='full')#, avoid_left_of=(0.2, (0.2, 0.4)))
 
     f.show()
