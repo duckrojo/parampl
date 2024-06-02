@@ -88,15 +88,15 @@ Write text into a paragraph
         paragraphs = split_into_paragraphs(text, collapse_whites=collapse_whites)
 
         limit, xx, width_line = borders.pop(0)
-        justify_offset = ((justify == 'right') + 0.5 * (justify == 'center')) * (width_line - length)
-        xx += justify_offset
 
         for paragraph in paragraphs:
 
             if justify == 'left' or justify == 'right' or justify == 'center':
                 for word in paragraph.split(' '):
                     if length + widths[word] > width_line:
-                        ax.text(xx, yy, ' '.join(words),
+                        justify_offset = ((justify == 'right') + 0.5 * (justify == 'center')
+                                          ) * (width_line - length + space_width)
+                        ax.text(xx + justify_offset, yy, ' '.join(words),
                                 fontsize=fontsize, color=color)
                         length = 0
                         words = []
@@ -259,7 +259,7 @@ et quam. Nam ut gravida libero, quis dapibus ante. Nam orci nisi, vehicula at mi
                avoid_right_of=[(0.8, (0.6, 0.5)),
                                (0.7, (0, 0.2)),
                                ],
-               width=test_width, justify='full')
+               width=test_width, justify='center')
     # , justify='full')#, avoid_left_of=(0.2, (0.2, 0.4)))
 
     f.show()
