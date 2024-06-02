@@ -173,21 +173,6 @@ Write text into a paragraph
         self.widths: dict[tuple, dict[str, float]] = {}
         self.heights: dict[tuple, float] = {}
 
-    def _compute_word_widths(self, words, fontsize):
-
-        widths, height, combined_hash = self._get_widths_height(fontsize)
-        text_artist = self.axes.text(0, 0, ' ',
-                                     fontsize=fontsize)
-
-        for word in words:
-            if word not in widths:
-                text_artist.set_text(word)
-                widths[word] = self._transformed_artist_extent(text_artist).width
-
-        text_artist.remove()
-
-        return widths, combined_hash
-
     def _get_widths_height(self, fontsize,
                            words: list[str] = None,
                            ):

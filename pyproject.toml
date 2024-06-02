@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "parampl"
-version = "0.1.0"
-description = ""
+description = "Formatting paragraphs for matplotlib text"
 authors = ["duckrojo <3063609+duckrojo@users.noreply.github.com>"]
 readme = "README.md"
+version = "0.0.0"
+#documentation = "https://parampl.readthedocs.io/en/latest/"
+repository = "https://github.com/duckrojo/parampl"
+
 
 [tool.poetry.dependencies]
 python = "^3.12"
