@@ -10,15 +10,16 @@ repository = "https://github.com/duckrojo/parampl"
 [tool.poetry-dynamic-versioning]
 enable = true
 
-
 [tool.poetry-dynamic-versioning.substitution]
 
 
-
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 matplotlib = "^3.9.0"
+numpy = "^1.26.4"
 
+[tool.poetry.group.docs.dependencies]
+lorem-text = "^2.1"
 
 [build-system]
 requires = ["poetry-core"]

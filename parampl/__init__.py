@@ -1,1 +1,1 @@
-from core import ParaMPL
+from .core import *
