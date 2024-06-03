@@ -32,20 +32,15 @@ para.write(lorem_ipsum, test_xy,
            width=test_width, justify='full',
            )
 
-para.write("""
-para.write(lorem_ipsum, (0.05, 0.95)
-
-                  avoid_left_of=[(0.2, (0.3, 0.7)),
-
-                                         (0.3, (0.4, 0.5))],
-
-                  avoid_right_of=(0.7, (0.2, 0.6)),
-
-                  width=0.7, justify='full',
-
-                 )
-""", (0.8, 0.1), rotation=90, collapse_whites=False,
-           justify='left', spacing=0)
-
+para.write("""para.write(lorem_ipsum, (0.05, 0.95)
+           avoid_left_of=[(0.2, (0.3, 0.7)),
+                                (0.3, (0.4, 0.5))],
+           avoid_right_of=(0.7, (0.2, 0.6)),
+           width=0.7, justify='full',
+          )
+""", (0.8, 0.1), rotation=90,
+           collapse_whites=False, paragraph_per_line=True,
+           justify='left', spacing=0,
+           family='monospace', color='red')
 
 f.show()

@@ -17,3 +17,4 @@ parampl.write(lorem.paragraph(), (0.05, 0.95),
 ```
 
 ![Sample with 'full' justify](sample_full.png)
+(Full code in quickstart.py)

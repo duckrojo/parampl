@@ -8,17 +8,25 @@ border_single_specification = tuple[float, float, float]
 border_specification = border_single_specification | list[border_single_specification]
 
 
-def split_into_paragraphs(text, collapse_whites=True):
+def split_into_paragraphs(text, collapse_whites=True, paragraph_per_line=False):
     if collapse_whites:
         text = re.sub(r' +', ' ', text)
 
-        def pre_process(x):
-            return x.strip()
+        def pre_process(x, rep):
+            return x.strip().replace(rep, " ")
     else:
-        def pre_process(x):
-            return x
+        def pre_process(x, rep):
+            return x.replace(rep, " ")
 
-    ret = [pre_process(para).replace("\n", " ") for para in re.split('\n\n+', text)]
+    if paragraph_per_line:
+        split_words = ' '
+        split_paragraph = '\n'
+    else:
+        split_words = '\n'
+        split_paragraph = '\n\n'
+
+    ret = [pre_process(para, split_words)
+           for para in re.split(f'{split_paragraph}+', text)]
     return ret
 
 

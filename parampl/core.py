@@ -13,6 +13,8 @@ class ParaMPL:
                  spacing: float = 0.5,
                  width: float = 1.0,
                  fontsize: float = 10,
+                 fontname: str | None = None,
+                 family: str | None = None,
                  color: None | str | tuple[float, float, float] = None,
                  transform: str = 'data',
                  ):
@@ -36,6 +38,8 @@ class ParaMPL:
         self.axes = axes
         self.fontsize = fontsize
         self.color = color
+        self.family = family
+        self.fontname = fontname
 
         self._renderer = axes.figure.canvas.get_renderer()
         if transform == 'data':
@@ -50,10 +54,13 @@ class ParaMPL:
               text: str,
               xy: tuple[float, float],
               collapse_whites: bool = True,
+              paragraph_per_line: bool = False,
               width: float | None = None,
               spacing: float | None = None,
               fontsize: float | None = None,
               color: str | None = None,
+              fontname: str | None = None,
+              family: str | None = None,
               rotation: float = 0,
               justify: str = 'left',
               ha: str = 'left',
@@ -100,8 +107,21 @@ Write text into a paragraph
             fontsize = self.fontsize
         if color is None:
             color = self.color
+        if family is None:
+            family = self.family
+        if fontname is None:
+            fontname_dict = {}
+        else:
+            fontname_dict = {'fontname': self.fontname}
 
         ax = self.axes
+
+        def write_line(left, bottom, text_in_line):
+
+            ax.text(left, bottom, text_in_line,
+                    fontsize=fontsize, color=color, rotation=rotation,
+                    family=family, **fontname_dict)
+
         old_artists = list(ax.texts)
 
         if ax.get_ylim()[1] < ax.get_ylim()[0] or ax.get_xlim()[1] < ax.get_xlim()[0]:
@@ -110,7 +130,7 @@ Write text into a paragraph
         if va != 'top' and (avoid_left_of is not None or avoid_right_of is not None):
             raise ValueError("if using avoid areas, then va='top' must be used")
 
-        widths, height, combined_hash = self._get_widths_height(fontsize,
+        widths, height, combined_hash = self._get_widths_height(fontsize, family, fontname,
                                                                 words=text.split())
         space_width = widths[' ']
 
@@ -137,7 +157,10 @@ Write text into a paragraph
 
         words = []
         length = 0
-        paragraphs = split_into_paragraphs(text, collapse_whites=collapse_whites)
+        paragraphs = split_into_paragraphs(text,
+                                           collapse_whites=collapse_whites,
+                                           paragraph_per_line=paragraph_per_line,
+                                           )
 
         limit, xx, width_line = borders.pop(0)
 
@@ -147,8 +170,8 @@ Write text into a paragraph
                 for word in paragraph.split(' '):
                     if length + widths[word] > width_line:
                         justify_offset = justify_mult * (width_line - length + space_width)
-                        ax.text(xx + justify_offset, yy, ' '.join(words),
-                                fontsize=fontsize, color=color, rotation=rotation)
+                        write_line(xx + justify_offset, yy, ' '.join(words))
+
                         xx, yy = xx + delta_xx, yy + delta_yy
                         length, words = 0, []
 
@@ -159,8 +182,8 @@ Write text into a paragraph
                     words.append(word)
 
                 justify_offset = justify_mult * (width_line - length + space_width)
-                ax.text(xx + justify_offset, yy, ' '.join(words),
-                        fontsize=fontsize, color=color, rotation=rotation)
+                write_line(xx + justify_offset, yy, ' '.join(words))
+
                 length, words = 0, []
                 xx, yy = xx + delta_xx, yy + delta_yy
 
@@ -173,8 +196,7 @@ Write text into a paragraph
                         else:
                             extra_spacing = 0
                         for old_width in words:
-                            ax.text(x, yy, old_width,
-                                    fontsize=fontsize, color=color, rotation=rotation)
+                            write_line(x, yy, old_width)
                             x += extra_spacing + space_width + widths[old_width]
                         length = 0
                         words = []
@@ -188,8 +210,7 @@ Write text into a paragraph
                     length += widths[word] + space_width
                     words.append(word)
 
-                ax.text(xx, yy, ' '.join(words),
-                        fontsize=fontsize, color=color, rotation=rotation)
+                write_line(xx, yy, ' '.join(words))
                 length = 0
                 words = []
                 yy += delta_yy
@@ -213,11 +234,12 @@ Write text into a paragraph
         elif va != 'top':
             raise ValueError(f"invalid va '{va}'. Must be 'top', 'bottom', or 'center'")
 
-    def _get_widths_height(self, fontsize,
+    def _get_widths_height(self, fontsize, family, fontname,
                            words: list[str] = None,
                            ):
-        text_artist = self.axes.text(0, 0, ' ', fontsize=fontsize)
-        combined_hash = (fontsize,)  # todo: probably font name should be in here
+        text_artist = self.axes.text(0, 0, ' ',
+                                     fontsize=fontsize, fontname=fontname, family=family)
+        combined_hash = (fontsize, family, fontname)
 
         if combined_hash not in self.widths:
             text_artist.set_text(' ')
