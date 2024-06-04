@@ -10,9 +10,10 @@ __all__ = ['ParaMPL', 'avoid_specification', 'avoid_single_specification']
 
 class ParaMPL:
     def __init__(self, axes: Axes,
-                 spacing: float = 0.5,
                  width: float = 1.0,
+                 spacing: float = 0.5,
                  fontsize: float = 10,
+                 justify: str = "left",
                  fontname: str | None = None,
                  family: str | None = None,
                  color: None | str | tuple[float, float, float] = None,
@@ -40,6 +41,7 @@ class ParaMPL:
         self.color = color
         self.family = family
         self.fontname = fontname
+        self.justify = justify
 
         self._renderer = axes.figure.canvas.get_renderer()
         if transform == 'data':
@@ -53,8 +55,6 @@ class ParaMPL:
     def write(self,
               text: str,
               xy: tuple[float, float],
-              collapse_whites: bool = True,
-              paragraph_per_line: bool = False,
               width: float | None = None,
               spacing: float | None = None,
               fontsize: float | None = None,
@@ -62,15 +62,29 @@ class ParaMPL:
               fontname: str | None = None,
               family: str | None = None,
               rotation: float = 0,
-              justify: str = 'left',
+              justify: str | None = None,
               ha: str = 'left',
               va: str = 'top',
               avoid_left_of: avoid_specification = None,
               avoid_right_of: avoid_specification = None,
+              collapse_whites: bool = True,
+              paragraph_per_line: bool = False,
               ):
         """
 Write text into a paragraph
 
+        :param text:
+          text to write
+        :param xy:
+           xy to place the paragraph
+        :param width:
+          use this width instead of the initialized one
+        :param paragraph_per_line:
+          if true, each new line is considered a new paragraph
+        :param family:
+          family of the font
+        :param fontname:
+          specific fontname, if not specified then use family
         :param rotation:
            anticlockwise rotation
         :param collapse_whites:
@@ -87,12 +101,6 @@ Write text into a paragraph
           Paragraph horizontal alignment
         :param justify:
           Line's justification
-        :param xy:
-           xy to place the paragraph
-        :param text:
-          text to write
-        :param width:
-          use this width instead of the initialized one
         :param spacing:
           use this spacing instead of the initialized one
         :param fontsize:
@@ -101,6 +109,8 @@ Write text into a paragraph
 
         if width is None:
             width = self.width
+        if justify is None:
+            justify = self.justify
         if spacing is None:
             spacing = self.spacing
         if fontsize is None:
