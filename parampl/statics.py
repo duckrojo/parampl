@@ -94,14 +94,14 @@ def parse_avoid(original_borders,
     # allows is a list of allowable rectangles to write. However, only the intersection of them is permitted.
     allows = []
     for x, (y1, y2) in avoid_left_of:
-        if y2 < y1:
-            y1, y2 = y2, y1
         if x is not None:
+            if y2 < y1:
+                y1, y2 = y2, y1
             allows.append((x, xx + width, y1 - height, y2))
     for x, (y1, y2) in avoid_right_of:
-        if y2 < y1:
-            y1, y2 = y2, y1
         if x is not None:
+            if y2 < y1:
+                y1, y2 = y2, y1
             allows.append((xx, x, y1 - height, y2))
 
     borders = original_borders

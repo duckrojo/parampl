@@ -9,7 +9,8 @@ __all__ = ['ParaMPL', 'avoid_specification', 'avoid_single_specification']
 
 
 class ParaMPL:
-    def __init__(self, axes: Axes,
+    def __init__(self,
+                 axes: Axes,
                  width: float = 1.0,
                  spacing: float = 0.5,
                  fontsize: float = 10,
@@ -43,7 +44,7 @@ class ParaMPL:
         self.fontname = fontname
         self.justify = justify
 
-        self._renderer = axes.figure.canvas.get_renderer()
+        self._renderer = axes.get_figure().canvas.get_renderer()
         if transform == 'data':
             self._transform = axes.transData.inverted()
         else:
