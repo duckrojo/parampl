@@ -174,6 +174,8 @@ Write text into a paragraph
                                            )
 
         limit, xx, width_line = borders.pop(0)
+        if limit is not None and yy < limit:
+            limit, xx, width_line = borders.pop(0)
 
         for paragraph in paragraphs:
 

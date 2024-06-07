@@ -11,6 +11,7 @@ border_specification = border_single_specification | list[border_single_specific
 def split_into_paragraphs(text, collapse_whites=True, paragraph_per_line=False):
     if collapse_whites:
         text = re.sub(r' +', ' ', text)
+        text = re.sub(r'\s*\n\s*', '\n', text)
 
         def pre_process(x, rep):
             return x.strip().replace(rep, " ")

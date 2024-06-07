@@ -17,4 +17,4 @@ parampl.write(lorem.paragraph(), (0.05, 0.95),
 ```
 
 ![Sample with 'full' justification and avoid areas](https://github.com/duckrojo/parampl/blob/master/sample_full.png?raw=true)
-(Full code in quickstart.py)
+(Full example code in quickstart.py)
