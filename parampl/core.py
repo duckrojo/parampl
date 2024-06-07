@@ -201,13 +201,14 @@ Write text into a paragraph
                 xx, yy = xx + delta_xx, yy + delta_yy
 
             elif justify == 'full':
-                x = xx
                 for word in paragraph.split(' '):
                     if length + widths[word] > width_line:
                         if len(words) > 1:
                             extra_spacing = (width_line - length + space_width) / (len(words) - 1)
                         else:
                             extra_spacing = 0
+
+                        x = xx
                         for old_width in words:
                             write_line(x, yy, old_width)
                             x += extra_spacing + space_width + widths[old_width]
@@ -218,7 +219,6 @@ Write text into a paragraph
                         xx += delta_xx
                         if limit is not None and yy < limit:
                             limit, xx, width_line = borders.pop(0)
-                        x = xx
 
                     length += widths[word] + space_width
                     words.append(word)
