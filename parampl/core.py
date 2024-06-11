@@ -2,10 +2,75 @@ import numpy as np
 from matplotlib.axes import Axes
 
 from parampl.statics import (split_into_paragraphs, parse_avoid,
-                             avoid_specification, avoid_single_specification)
+                             avoid_specification, avoid_single_specification, get_aspect)
 
 
 __all__ = ['ParaMPL', 'avoid_specification', 'avoid_single_specification']
+
+
+class _line_position:
+    def __init__(self,
+                 xy,
+                 width, height,
+                 rotation, spacing,
+                 ha, justify,
+                 y_to_x_ratio=1.0,
+                 xy_at_top=True):
+        self.x_orig, self.y_orig = xy
+        self.width = width
+        self.height = height
+        self.rotation = rotation
+
+        if ha == 'right':
+            self.x_orig -= width
+        elif ha == 'center':
+            self.x_orig -= width / 2.0
+        elif ha != 'left':
+            raise ValueError(f"invalid ha '{ha}'. Must be 'right', 'left', or 'center'")
+
+        if xy_at_top:
+            self.y_orig -= height * np.cos(rotation * np.pi / 180)  # top alignment
+            self.x_orig -= height * np.sin(rotation * np.pi / 180)  # top alignment
+
+        self.delta_x = (1 + spacing) * height * np.sin(rotation * np.pi / 180) * y_to_x_ratio
+        self.delta_y = - (1 + spacing) * height * np.cos(rotation * np.pi / 180)
+
+        self.borders = [(None, self.x_orig, width)]
+
+        self.limit = None
+        self.x = self.x_orig
+        self.y = self.y_orig
+        self.width_line = self.width
+
+        self.justify_mult = (justify == 'right') + 0.5 * (justify == 'center')
+        if justify not in ['right', 'center', 'left', 'full']:
+            raise ValueError(f'Unrecognized justify {justify}')
+
+    def check_next_border(self, force=False):
+        if force:
+            self.limit, self.x, self.width_line = self.borders.pop(0)
+        while self.limit is not None and self.y < self.limit:
+            self.limit, self.x, self.width_line = self.borders.pop(0)
+
+    def add_avoids(self, avoid_left_of, avoid_right_of):
+        if avoid_left_of is not None or avoid_right_of is not None:
+            self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
+
+    def offset(self,
+               offset: float = 0,
+               justified_length: float = 0):
+        total_offset = self.justify_mult * (self.width_line - justified_length) + offset
+        return (self.x + total_offset * np.cos(self.rotation * np.pi / 180),
+                self.y + total_offset * np.sin(self.rotation * np.pi / 180))
+
+    def next_line(self):
+        self.x += self.delta_x
+        self.y += self.delta_y
+
+        self.check_next_border()
+
+    def total_height(self):
+        return self.y_orig - self.y
 
 
 class ParaMPL:
@@ -145,101 +210,67 @@ Write text into a paragraph
                                                                 words=text.split())
         space_width = widths[' ']
 
-        xx, yy = xy
+        lp = _line_position(xy, width, height, rotation, spacing, ha, justify,
+                            y_to_x_ratio=get_aspect(ax))
+        lp.add_avoids(avoid_left_of, avoid_right_of)
+        lp.check_next_border(force=True)
 
-        yy -= height * np.cos(rotation * np.pi / 180)  # top alignment
-        xx += height * np.sin(rotation * np.pi / 180)  # top alignment
-
-        delta_yy = - (1 + spacing) * height * np.cos(rotation * np.pi / 180)
-        delta_xx = (1 + spacing) * height * np.sin(rotation * np.pi / 180)
-
-        if ha == 'right':
-            xx -= width
-        elif ha == 'center':
-            xx -= width / 2.0
-        elif ha != 'left':
-            raise ValueError(f"invalid ha '{ha}'. Must be 'right', 'left', or 'center'")
-
-        borders = [(None, xx, width)]
-        justify_mult = (justify == 'right') + 0.5 * (justify == 'center')
-
-        if avoid_left_of is not None or avoid_right_of is not None:
-            borders = parse_avoid(borders, avoid_left_of, avoid_right_of, height)
-
-        words = []
-        length = 0
         paragraphs = split_into_paragraphs(text,
                                            collapse_whites=collapse_whites,
                                            paragraph_per_line=paragraph_per_line,
                                            )
 
-        limit, xx, width_line = borders.pop(0)
-        if limit is not None and yy < limit:
-            limit, xx, width_line = borders.pop(0)
-
         for paragraph in paragraphs:
+            words = []
+            length = 0
 
-            if justify == 'left' or justify == 'right' or justify == 'center':
+            if justify == 'full':
                 for word in paragraph.split(' '):
-                    if length + widths[word] > width_line:
-                        justify_offset = justify_mult * (width_line - length + space_width)
-                        write_line(xx + justify_offset, yy, ' '.join(words))
-
-                        xx, yy = xx + delta_xx, yy + delta_yy
-                        length, words = 0, []
-
-                        if limit is not None and yy < limit:
-                            limit, xx, width_line = borders.pop(0)
-
-                    length += widths[word] + space_width
-                    words.append(word)
-
-                justify_offset = justify_mult * (width_line - length + space_width)
-                write_line(xx + justify_offset, yy, ' '.join(words))
-
-                length, words = 0, []
-                xx, yy = xx + delta_xx, yy + delta_yy
-
-            elif justify == 'full':
-                x = xx
-                for word in paragraph.split(' '):
-                    if length + widths[word] > width_line:
+                    if length + widths[word] > lp.width_line:
                         if len(words) > 1:
-                            extra_spacing = (width_line - length + space_width) / (len(words) - 1)
+                            extra_spacing = (lp.width_line - length + space_width) / (len(words) - 1)
                         else:
                             extra_spacing = 0
-                        for old_width in words:
-                            write_line(x, yy, old_width)
-                            x += extra_spacing + space_width + widths[old_width]
+
+                        offset = 0
+                        for old_word in words:
+                            write_line(*lp.offset(offset=offset),
+                                       old_word)
+                            offset += extra_spacing + space_width + widths[old_word]
+
+                        lp.next_line()
                         length = 0
                         words = []
 
-                        yy += delta_yy
-                        xx += delta_xx
-                        if limit is not None and yy < limit:
-                            limit, xx, width_line = borders.pop(0)
-                        x = xx
+                    length += widths[word] + space_width
+                    words.append(word)
+
+                write_line(*lp.offset(), ' '.join(words))
+                lp.next_line()
+
+            else:
+                for word in paragraph.split(' '):
+                    if length + widths[word] > lp.width_line:
+                        write_line(*lp.offset(justified_length=length - space_width),
+                                   ' '.join(words))
+                        lp.next_line()
+                        length, words = 0, []
 
                     length += widths[word] + space_width
                     words.append(word)
 
-                write_line(xx, yy, ' '.join(words))
-                length = 0
-                words = []
-                yy += delta_yy
-                xx += delta_xx
-
-            else:
-                raise ValueError(f'Unrecognized justify {justify}')
+                write_line(*lp.offset(justified_length=length - space_width),
+                           ' '.join(words))
+                lp.next_line()
 
         if va == 'bottom':
-            total_height = xy[1] - yy
+            total_height = lp.total_height()
             for artist in ax.texts:
                 if artist not in old_artists:
                     artist.set_y(artist.get_position()[1] + total_height)
 
         elif va == 'center':
-            total_height = xy[1] - yy
+            total_height = lp.total_height()
             for artist in ax.texts:
                 if artist not in old_artists:
                     artist.set_y(artist.get_position()[1] + total_height / 2)

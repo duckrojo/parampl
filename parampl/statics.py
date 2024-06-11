@@ -1,4 +1,5 @@
 import re
+from operator import sub
 
 vertical_lims = tuple[float, float]
 avoid_single_specification = tuple[float, vertical_lims]
@@ -29,6 +30,20 @@ def split_into_paragraphs(text, collapse_whites=True, paragraph_per_line=False):
     ret = [pre_process(para, split_words)
            for para in re.split(f'{split_paragraph}+', text)]
     return ret
+
+
+def get_aspect(ax):
+    # Total figure size
+    figW, figH = ax.get_figure().get_size_inches()
+    # Axis size on figure
+    _, _, w, h = ax.get_position().bounds
+    # Ratio of display units
+    disp_ratio = (figH * h) / (figW * w)
+    # Ratio of data units
+    # Negative over negative because of the order of subtraction
+    data_ratio = sub(*ax.get_ylim()) / sub(*ax.get_xlim())
+
+    return disp_ratio / data_ratio
 
 
 def mix_borders(limit, x0, w0, left1, right1):
