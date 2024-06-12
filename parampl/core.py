@@ -193,11 +193,11 @@ Write text into a paragraph
 
         ax = self.axes
 
-        def write_line(left, bottom, text_in_line):
+        def write_line(left, bottom, text_in_line, zorder=3):
 
             ax.text(left, bottom, text_in_line,
                     fontsize=fontsize, color=color, rotation=rotation,
-                    family=family, **fontname_dict)
+                    family=family, zorder=zorder, **fontname_dict)
 
         old_artists = list(ax.texts)
 
@@ -264,19 +264,30 @@ Write text into a paragraph
                            ' '.join(words))
                 lp.next_line()
 
-        if va == 'bottom':
-            total_height = lp.total_height()
+        total_height = lp.total_height()
+        lowest = min(lp.y,
+                     lp.y + self.width * np.sin(lp.rotation*np.pi/180),
+                     lp.y_orig + lp.delta_y,
+                     lp.y_orig + lp.delta_y + self.width * np.sin(lp.rotation*np.pi/180),
+                     )
+        delta = lp.y_orig - lowest
+
+        if va == 'top':
             for artist in ax.texts:
                 if artist not in old_artists:
-                    artist.set_y(artist.get_position()[1] + total_height)
+                    artist.set_y(artist.get_position()[1] + delta - total_height)
+
+        elif va == 'bottom':
+            for artist in ax.texts:
+                if artist not in old_artists:
+                    artist.set_y(artist.get_position()[1] + delta)
 
         elif va == 'center':
-            total_height = lp.total_height()
             for artist in ax.texts:
                 if artist not in old_artists:
-                    artist.set_y(artist.get_position()[1] + total_height / 2)
+                    artist.set_y(artist.get_position()[1] + delta - total_height / 2)
 
-        elif va != 'top':
+        else:
             raise ValueError(f"invalid va '{va}'. Must be 'top', 'bottom', or 'center'")
 
     def _get_widths_height(self, fontsize, family, fontname,

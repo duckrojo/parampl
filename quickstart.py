@@ -37,12 +37,13 @@ eval(command)
 para.write(command, (0.8, 0.1), rotation=90,
            collapse_whites=False, paragraph_per_line=True,
            justify='left', spacing=0.2,
+           va='bottom',
            family='monospace', color='blue')
 
 para.write("Very Much\nNot\nTop\nSecret", (0.5, 0.5),
            rotation=45,
            fontsize=35, width=0.6,
-           ha='center', va='top',
+           ha='center', va='center',
            collapse_whites=False, paragraph_per_line=True,
            justify='center', spacing=0,
            family='cursive', color='red')

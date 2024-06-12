@@ -73,25 +73,6 @@ def finish_with_bottom(x, w,
             (None, x, w)]
 
 
-def write_line(ax, xy, words,
-               length, width,
-               fontsize, color,
-               justify, widths):
-
-    x, y = xy
-
-    if justify == 'left' or justify == 'right':
-        ax.text(x, y + (justify == 'right') * (width - length), ' '. join(words),
-                fontsize=fontsize, color=color)
-
-    elif justify == 'full':
-        extra_spacing = (width - length) / (len(words) - 1)
-        for word in words:
-            ax.text(x, y, word,
-                    fontsize=fontsize, color=color)
-            x += extra_spacing + widths[word]
-
-
 def parse_avoid(original_borders,
                 avoid_left_of: avoid_specification,
                 avoid_right_of: avoid_specification,
