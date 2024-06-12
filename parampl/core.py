@@ -36,11 +36,11 @@ class _line_position:
         self.delta_y = - (1 + spacing) * height * np.cos(rotation * np.pi / 180)
 
         self.borders = [(None, self.x_orig, width)]
-
-        self.limit = None
+        self.limit: float | None = None
         self.x = self.x_orig
-        self.y = self.y_orig
         self.width_line = self.width
+
+        self.y = self.y_orig
 
         self.justify_mult = (justify == 'right') + 0.5 * (justify == 'center')
         if justify not in ['right', 'center', 'left', 'full']:
@@ -55,6 +55,8 @@ class _line_position:
     def add_avoids(self, avoid_left_of, avoid_right_of):
         if avoid_left_of is not None or avoid_right_of is not None:
             self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
+
+        self.check_next_border(force=True)
 
     def offset(self,
                offset: float = 0,
@@ -204,8 +206,9 @@ Write text into a paragraph
         if ax.get_ylim()[1] < ax.get_ylim()[0] or ax.get_xlim()[1] < ax.get_xlim()[0]:
             raise NotImplementedError("paraMPL.write() is only available for plots with increasing x- and y-axis")
 
-        if va != 'top' and (avoid_left_of is not None or avoid_right_of is not None):
-            raise ValueError("if using avoid areas, then va='top' must be used")
+        if ((va != 'top' or rotation != 0 or ha != 'left') and
+                (avoid_left_of is not None or avoid_right_of is not None)):
+            raise ValueError("if using avoid areas, then va='top', ha='left', and rotation=0 are required")
 
         widths, height, combined_hash = self._get_widths_height(fontsize, family, fontname,
                                                                 words=text.split())
@@ -214,7 +217,6 @@ Write text into a paragraph
         lp = _line_position(xy, width, height, rotation, spacing, ha, justify,
                             y_to_x_ratio=get_aspect(ax))
         lp.add_avoids(avoid_left_of, avoid_right_of)
-        lp.check_next_border(force=True)
 
         paragraphs = split_into_paragraphs(text,
                                            collapse_whites=collapse_whites,
