@@ -33,12 +33,14 @@ def split_into_paragraphs(text, collapse_whites=True, paragraph_per_line=False):
 
 
 def get_aspect(ax):
+    # code from https://stackoverflow.com/questions/41597177/get-aspect-ratio-of-axes
+    #
     # Total figure size
-    figW, figH = ax.get_figure().get_size_inches()
+    fig_width, fig_height = ax.get_figure().get_size_inches()
     # Axis size on figure
     _, _, w, h = ax.get_position().bounds
     # Ratio of display units
-    disp_ratio = (figH * h) / (figW * w)
+    disp_ratio = (fig_height * h) / (fig_width * w)
     # Ratio of data units
     # Negative over negative because of the order of subtraction
     data_ratio = sub(*ax.get_ylim()) / sub(*ax.get_xlim())
