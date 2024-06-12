@@ -70,7 +70,8 @@ class _line_position:
         self.check_next_border()
 
     def total_height(self):
-        return self.y_orig - self.y
+        return ((self.y_orig - self.y) * np.cos(self.rotation * np.pi / 180) +
+                self.width * np.sin(self.rotation*np.pi / 180))
 
 
 class ParaMPL:
