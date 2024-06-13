@@ -1,9 +1,11 @@
+import matplotlib.artist
 import numpy as np
 from matplotlib.axes import Axes
 
 from parampl.statics import (split_into_paragraphs, parse_avoid,
                              avoid_specification, avoid_single_specification, get_aspect)
 
+rectangle_specification = tuple[float, float, float, float]  # left, right, bottom, top
 
 __all__ = ['ParaMPL', 'avoid_specification', 'avoid_single_specification']
 
@@ -52,11 +54,27 @@ class _line_position:
         while self.limit is not None and self.y < self.limit:
             self.limit, self.x, self.width_line = self.borders.pop(0)
 
+    def add_rectangles(self, rectangles):
+        x = self.x_orig
+        w = self.width
+
+        avoid_left = []
+        avoid_right = []
+        for left, right, bottom, top in rectangles:
+            left_space = left - x
+            right_space = x + w - right
+            if left_space < right_space:
+                avoid_left.append((right, (bottom, top)))
+            else:
+                avoid_right.append((left, (bottom, top)))
+
+        self.add_avoids(avoid_left, avoid_right)
+
     def add_avoids(self, avoid_left_of, avoid_right_of):
         if avoid_left_of is not None or avoid_right_of is not None:
             self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
 
-        self.check_next_border(force=True)
+            self.check_next_border(force=True)
 
     def offset(self,
                offset: float = 0,
@@ -75,6 +93,14 @@ class _line_position:
         return ((self.y_orig - self.y) * np.cos(self.rotation * np.pi / 180) +
                 self.width * np.sin(self.rotation*np.pi / 180))
 
+    def y_to_bottom_offset(self):
+        lowest = min(self.y,
+                     self.y + self.width * np.sin(self.rotation*np.pi/180),
+                     self.y_orig + self.delta_y,
+                     self.y_orig + self.delta_y + self.width * np.sin(self.rotation*np.pi/180),
+                     )
+        return self.y_orig - lowest
+
 
 class ParaMPL:
     def __init__(self,
@@ -87,6 +113,7 @@ class ParaMPL:
                  family: str | None = None,
                  color: None | str | tuple[float, float, float] = None,
                  transform: str = 'data',
+                 rotation: float = 0.0,
                  ):
         """
 
@@ -103,14 +130,15 @@ class ParaMPL:
         :param transform:
           transform in which the coordinates are given. Currently supported: 'data'
         """
-        self.width = width
-        self.spacing = spacing
-        self.axes = axes
-        self.fontsize = fontsize
-        self.color = color
-        self.family = family
-        self.fontname = fontname
-        self.justify = justify
+        self._width = width
+        self._spacing = spacing
+        self._axes = axes
+        self._fontsize = fontsize
+        self._color = color
+        self._family = family
+        self._fontname = fontname
+        self._justify = justify
+        self._rotation = rotation
 
         self._renderer = axes.get_figure().canvas.get_renderer()
         if transform == 'data':
@@ -118,30 +146,55 @@ class ParaMPL:
         else:
             raise NotImplementedError("only 'data' transform is supported for now")
 
-        self.widths: dict[tuple, dict[str, float]] = {}
-        self.heights: dict[tuple, float] = {}
+        self._widths: dict[tuple, dict[str, float]] = {}
+        self._heights: dict[tuple, float] = {}
+        self._rectangles: list[rectangle_specification] = []
+
+    def avoid_rectangle(self,
+                        left_right_bottom_top: rectangle_specification,
+                        ):
+        """
+        Add rectangles to avoid whenever ha='left', va='top', rotation=0 on write()
+
+        :param left_right_bottom_top:
+          specify rectangle limits to avoid
+        """
+        self._rectangles.append(left_right_bottom_top)
+
+    def reset_rectangles(self):
+        """Reset avoidance rectangles"""
+        self._rectangles = []
 
     def write(self,
               text: str,
               xy: tuple[float, float],
+
               width: float | None = None,
               spacing: float | None = None,
               fontsize: float | None = None,
               color: str | None = None,
               fontname: str | None = None,
               family: str | None = None,
-              rotation: float = 0,
+              rotation: float | None = None,
               justify: str | None = None,
+
               ha: str = 'left',
               va: str = 'top',
+
               avoid_left_of: avoid_specification = None,
               avoid_right_of: avoid_specification = None,
+              avoid_rectangles: bool = True,
+
               collapse_whites: bool = True,
               paragraph_per_line: bool = False,
-              ):
+              ) -> list[matplotlib.artist.Artist]:
         """
 Write text into a paragraph
 
+        :param avoid_rectangles:
+          whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
+        :rtype:
+          return list of artists with text
         :param text:
           text to write
         :param xy:
@@ -177,23 +230,25 @@ Write text into a paragraph
         """
 
         if width is None:
-            width = self.width
+            width = self._width
         if justify is None:
-            justify = self.justify
+            justify = self._justify
         if spacing is None:
-            spacing = self.spacing
+            spacing = self._spacing
         if fontsize is None:
-            fontsize = self.fontsize
+            fontsize = self._fontsize
         if color is None:
-            color = self.color
+            color = self._color
+        if rotation is None:
+            rotation = self._rotation
         if family is None:
-            family = self.family
+            family = self._family
         if fontname is None:
             fontname_dict = {}
         else:
-            fontname_dict = {'fontname': self.fontname}
+            fontname_dict = {'fontname': self._fontname}
 
-        ax = self.axes
+        ax = self._axes
 
         def write_line(left, bottom, text_in_line, zorder=3):
 
@@ -201,23 +256,31 @@ Write text into a paragraph
                     fontsize=fontsize, color=color, rotation=rotation,
                     family=family, zorder=zorder, **fontname_dict)
 
+        # old artists are already present in the axes and won't be moved by the posteriori vertical alignment
         old_artists = list(ax.texts)
 
         if ax.get_ylim()[1] < ax.get_ylim()[0] or ax.get_xlim()[1] < ax.get_xlim()[0]:
             raise NotImplementedError("paraMPL.write() is only available for plots with increasing x- and y-axis")
 
-        if ((va != 'top' or rotation != 0 or ha != 'left') and
-                (avoid_left_of is not None or avoid_right_of is not None)):
-            raise ValueError("if using avoid areas, then va='top', ha='left', and rotation=0 are required")
-
+        # word size info
         widths, height, combined_hash = self._get_widths_height(fontsize, family, fontname,
                                                                 words=text.split())
         space_width = widths[' ']
 
+        # initialize position-storing object
         lp = _line_position(xy, width, height, rotation, spacing, ha, justify,
                             y_to_x_ratio=get_aspect(ax))
         lp.add_avoids(avoid_left_of, avoid_right_of)
 
+        # add rectangles to avoid if orientation and alignment is adequate
+        if va == 'top' and rotation == 0 and ha == 'left':
+            if avoid_rectangles:
+                lp.add_rectangles(self._rectangles)
+        # if orientation is not adequate, but avoid is specified raise error
+        elif avoid_left_of is not None or avoid_right_of is not None:
+            raise ValueError("if using avoid areas, then va='top', ha='left', and rotation=0 are required")
+
+        # separate and process paragraphs one at a time.
         paragraphs = split_into_paragraphs(text,
                                            collapse_whites=collapse_whites,
                                            paragraph_per_line=paragraph_per_line,
@@ -227,6 +290,7 @@ Write text into a paragraph
             words = []
             length = 0
 
+            # if full justified add word-by-word size and when line is completed, fill with space
             if justify == 'full':
                 for word in paragraph.split(' '):
                     if length + widths[word] > lp.width_line:
@@ -251,6 +315,7 @@ Write text into a paragraph
                 write_line(*lp.offset(), ' '.join(words))
                 lp.next_line()
 
+            # if left, right, center justified then write the whole line then move it.
             else:
                 for word in paragraph.split(' '):
                     if length + widths[word] > lp.width_line:
@@ -266,40 +331,39 @@ Write text into a paragraph
                            ' '.join(words))
                 lp.next_line()
 
+        # get list of artists generated for these paragraphs.
+        parampl_artists = [artist for artist in ax.texts if artist not in old_artists]
+
+        # once all paragraphs are finished, do the vertical alignment
         total_height = lp.total_height()
-        lowest = min(lp.y,
-                     lp.y + self.width * np.sin(lp.rotation*np.pi/180),
-                     lp.y_orig + lp.delta_y,
-                     lp.y_orig + lp.delta_y + self.width * np.sin(lp.rotation*np.pi/180),
-                     )
-        delta = lp.y_orig - lowest
+        delta = lp.y_to_bottom_offset()
 
         if va == 'top':
-            for artist in ax.texts:
-                if artist not in old_artists:
-                    artist.set_y(artist.get_position()[1] + delta - total_height)
+            for artist in parampl_artists:
+                artist.set_y(artist.get_position()[1] + delta - total_height)
 
         elif va == 'bottom':
-            for artist in ax.texts:
-                if artist not in old_artists:
+            if delta != 0:
+                for artist in parampl_artists:
                     artist.set_y(artist.get_position()[1] + delta)
 
         elif va == 'center':
-            for artist in ax.texts:
-                if artist not in old_artists:
-                    artist.set_y(artist.get_position()[1] + delta - total_height / 2)
+            for artist in parampl_artists:
+                artist.set_y(artist.get_position()[1] + delta - total_height / 2)
 
         else:
             raise ValueError(f"invalid va '{va}'. Must be 'top', 'bottom', or 'center'")
 
+        return parampl_artists
+
     def _get_widths_height(self, fontsize, family, fontname,
                            words: list[str] = None,
                            ):
-        text_artist = self.axes.text(0, 0, ' ',
-                                     fontsize=fontsize, fontname=fontname, family=family)
+        text_artist = self._axes.text(0, 0, ' ',
+                                      fontsize=fontsize, fontname=fontname, family=family)
         combined_hash = (fontsize, family, fontname)
 
-        if combined_hash not in self.widths:
+        if combined_hash not in self._widths:
             text_artist.set_text(' ')
             widths: dict[str, float] = {' ': self._transformed_artist_extent(text_artist).width,
                                         '': 0,
@@ -308,10 +372,10 @@ Write text into a paragraph
             text_artist.set_text('L')
             height = self._transformed_artist_extent(text_artist).height
 
-            self.widths[combined_hash] = widths
-            self.heights[combined_hash] = height
+            self._widths[combined_hash] = widths
+            self._heights[combined_hash] = height
         else:
-            widths = self.widths[combined_hash]
+            widths = self._widths[combined_hash]
 
         if words is not None:
             for word in words:
@@ -321,7 +385,7 @@ Write text into a paragraph
 
         text_artist.remove()
 
-        return self.widths[combined_hash], self.heights[combined_hash], combined_hash
+        return self._widths[combined_hash], self._heights[combined_hash], combined_hash
 
     def _transformed_artist_extent(self, artist):
         extent = artist.get_window_extent(renderer=self._renderer)

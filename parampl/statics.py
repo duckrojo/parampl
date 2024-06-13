@@ -118,7 +118,7 @@ def parse_avoid(original_borders,
 
 def allow_to_borders(incoming_borders, x_left, x_right, y_top, y_bottom
                      ) -> list[border_single_specification]:
-    """translates user-friendly avoid to code-friendly borders.
+    """translates user-friendly `avoid` areas to code-friendly `borders` with the allowed areas.
 
 Avoid specifies a list of rectangles that can be written into. However, it is only
 the intersection of them the real allowed place.
