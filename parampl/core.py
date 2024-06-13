@@ -105,15 +105,20 @@ class _line_position:
 class ParaMPL:
     def __init__(self,
                  axes: Axes,
+                 transform: str = 'data',
+
                  width: float = 1.0,
                  spacing: float = 0.5,
-                 fontsize: float = 10,
-                 justify: str = "left",
+
                  fontname: str | None = None,
+                 fontsize: float = None,
                  family: str | None = None,
+                 weight: str | None = None,
+                 style: str | None = None,
+
                  color: None | str | tuple[float, float, float] = None,
-                 transform: str = 'data',
                  rotation: float = 0.0,
+                 justify: str = "left",
                  ):
         """
 
@@ -123,8 +128,16 @@ class ParaMPL:
           default spacing
         :param width:
            default width
+        :param family:
+           default font name
+        :param family:
+           default font family, uses matplotlib's value at initialization if not specified
         :param fontsize:
-           default fontsize
+           default fontsize, uses matplotlib's value at initialization if not specified
+        :param weight:
+           default weight, uses matplotlib's value at initialization if not specified
+        :param style:
+           default style, uses matplotlib's value at initialization if not specified
         :param color:
           default color
         :param transform:
@@ -133,12 +146,27 @@ class ParaMPL:
         self._width = width
         self._spacing = spacing
         self._axes = axes
-        self._fontsize = fontsize
         self._color = color
-        self._family = family
         self._fontname = fontname
         self._justify = justify
         self._rotation = rotation
+
+        if family is None:
+            self._family = matplotlib.rcParams['font.family'][0]
+        else:
+            self._family = family
+        if fontsize is None:
+            self._fontsize = matplotlib.rcParams['font.size']
+        else:
+            self._fontsize = fontsize
+        if weight is None:
+            self._weight = matplotlib.rcParams['font.weight']
+        else:
+            self._weight = weight
+        if style is None:
+            self._style = matplotlib.rcParams['font.style']
+        else:
+            self._style = style
 
         self._renderer = axes.get_figure().canvas.get_renderer()
         if transform == 'data':
@@ -171,10 +199,14 @@ class ParaMPL:
 
               width: float | None = None,
               spacing: float | None = None,
-              fontsize: float | None = None,
-              color: str | None = None,
+
               fontname: str | None = None,
+              fontsize: float | None = None,
               family: str | None = None,
+              weight: str | None = None,
+              style: str | None = None,
+
+              color: str | None = None,
               rotation: float | None = None,
               justify: str | None = None,
 
@@ -191,42 +223,52 @@ class ParaMPL:
         """
 Write text into a paragraph
 
-        :param avoid_rectangles:
-          whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
         :rtype:
           return list of artists with text
         :param text:
           text to write
         :param xy:
            xy to place the paragraph
+
         :param width:
           use this width instead of the initialized one
-        :param paragraph_per_line:
-          if true, each new line is considered a new paragraph
-        :param family:
-          family of the font
+        :param spacing:
+          use this spacing instead of the initialized one
+
+        :param fontsize:
+          use this fontsize instead of the initialized one
         :param fontname:
           specific fontname, if not specified then use family
-        :param rotation:
-           anticlockwise rotation
-        :param collapse_whites:
-          whether multiple side-by-side withes should be considered as one
+        :param family:
+          family of the font
+        :param weight:
+           font weight
+        :param style:
+          font style
+
         :param color:
           color of text
+        :param rotation:
+           anticlockwise rotation
+        :param justify:
+          Line's justification
+
+        :param avoid_rectangles:
+          whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
+        :param collapse_whites:
+          whether multiple side-by-side withes should be considered as one
+        :param paragraph_per_line:
+          if true, each new line is considered a new paragraph
+
         :param avoid_left_of:
           tuple (x_lim, (y1, y2)). Avoid space left of x_lim between y1 and y2
         :param avoid_right_of:
           tuple (x_lim, (y1, y2)). Avoid space right of x_lim between y1 and y2
+
         :param va:
           Paragraph vertical alignment
         :param ha:
           Paragraph horizontal alignment
-        :param justify:
-          Line's justification
-        :param spacing:
-          use this spacing instead of the initialized one
-        :param fontsize:
-          use this fontsize instead of the initialized one
         """
 
         if width is None:
@@ -243,6 +285,10 @@ Write text into a paragraph
             rotation = self._rotation
         if family is None:
             family = self._family
+        if weight is None:
+            weight = self._weight
+        if style is None:
+            style = self._style
         if fontname is None:
             fontname_dict = {}
         else:
@@ -254,6 +300,7 @@ Write text into a paragraph
 
             ax.text(left, bottom, text_in_line,
                     fontsize=fontsize, color=color, rotation=rotation,
+                    weight=weight, style=style,
                     family=family, zorder=zorder, **fontname_dict)
 
         # old artists are already present in the axes and won't be moved by the posteriori vertical alignment
@@ -264,6 +311,7 @@ Write text into a paragraph
 
         # word size info
         widths, height, combined_hash = self._get_widths_height(fontsize, family, fontname,
+                                                                weight, style,
                                                                 words=text.split())
         space_width = widths[' ']
 
@@ -357,11 +405,14 @@ Write text into a paragraph
         return parampl_artists
 
     def _get_widths_height(self, fontsize, family, fontname,
+                           weight, style,
                            words: list[str] = None,
                            ):
         text_artist = self._axes.text(0, 0, ' ',
-                                      fontsize=fontsize, fontname=fontname, family=family)
-        combined_hash = (fontsize, family, fontname)
+                                      fontsize=fontsize, fontname=fontname, family=family,
+                                      weight=weight, style=style,
+                                      )
+        combined_hash = (fontsize, family, fontname, weight, style)
 
         if combined_hash not in self._widths:
             text_artist.set_text(' ')
