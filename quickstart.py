@@ -28,9 +28,9 @@ para = ParaMPL(ax, spacing=0.3, fontsize=7)
 command1 = f"""para.avoid_rectangle((0.6, 1, 0.6, 0.8))"""
 command2 = f"""para.write(lorem_ipsum, {test_xy},
            avoid_left_of=[(0.15, (0.3, 0.7)),
-                                (0.3, (0.4, 0.5))],
+                                 (0.3, (0.4, 0.5))],
            avoid_right_of=(0.7, (0.2, {test_xy[1]})),
-           width={test_width}, justify='full',
+           width={test_width}, justify='full', spacing=1.3,
            )"""
 
 eval(command1)
@@ -38,7 +38,7 @@ eval(command2)
 
 para.write(command1 + "\n" + command2, (0.8, 0.1), rotation=90,
            collapse_whites=False, paragraph_per_line=True,
-           spacing=0.2, va='bottom',
+           spacing=1.2, va='bottom',
            family='monospace', color='blue')
 
 para.write("Very Much\nNot\nTop\nSecret", (0.5, 0.5),
@@ -46,7 +46,7 @@ para.write("Very Much\nNot\nTop\nSecret", (0.5, 0.5),
            fontsize=35, width=0.6,
            ha='center', va='center',
            collapse_whites=False, paragraph_per_line=True,
-           justify='center', spacing=0,
+           justify='center', spacing=0.9,
            family='cursive', color='red')
 
 

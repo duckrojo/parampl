@@ -34,8 +34,8 @@ class _line_position:
             self.y_orig -= height * np.cos(rotation * np.pi / 180)  # top alignment
             self.x_orig -= height * np.sin(rotation * np.pi / 180)  # top alignment
 
-        self.delta_x = (1 + spacing) * height * np.sin(rotation * np.pi / 180) * y_to_x_ratio
-        self.delta_y = - (1 + spacing) * height * np.cos(rotation * np.pi / 180)
+        self.delta_x = spacing * height * np.sin(rotation * np.pi / 180) * y_to_x_ratio
+        self.delta_y = - spacing * height * np.cos(rotation * np.pi / 180)
 
         self.borders = [(None, self.x_orig, width)]
         self.limit: float | None = None
@@ -78,7 +78,8 @@ class _line_position:
 
     def offset(self,
                offset: float = 0,
-               justified_length: float = 0):
+               justified_length: float = 0,
+               ) -> tuple[float, float]:
         total_offset = self.justify_mult * (self.width_line - justified_length) + offset
         return (self.x + total_offset * np.cos(self.rotation * np.pi / 180),
                 self.y + total_offset * np.sin(self.rotation * np.pi / 180))
@@ -108,7 +109,7 @@ class ParaMPL:
                  transform: str = 'data',
 
                  width: float = 1.0,
-                 spacing: float = 0.5,
+                 spacing: float = 1.3,
 
                  fontname: str | None = None,
                  fontsize: float = None,
@@ -119,11 +120,14 @@ class ParaMPL:
                  color: None | str | tuple[float, float, float] = None,
                  rotation: float = 0.0,
                  justify: str = "left",
+                 zorder: float | None = 3,
                  ):
         """
 
         :param axes:
           matplotlib.axes.Axes in which to put the paragraphs
+        :param transform:
+          transform in which the coordinates are given. Currently supported: 'data'
         :param spacing:
           default spacing
         :param width:
@@ -140,33 +144,36 @@ class ParaMPL:
            default style, uses matplotlib's value at initialization if not specified
         :param color:
           default color
-        :param transform:
-          transform in which the coordinates are given. Currently supported: 'data'
+        :param zorder:
+          default zorder
         """
-        self._width = width
-        self._spacing = spacing
-        self._axes = axes
-        self._color = color
-        self._fontname = fontname
-        self._justify = justify
-        self._rotation = rotation
 
         if family is None:
-            self._family = matplotlib.rcParams['font.family'][0]
-        else:
-            self._family = family
+            family = matplotlib.rcParams['font.family'][0]
         if fontsize is None:
-            self._fontsize = matplotlib.rcParams['font.size']
-        else:
-            self._fontsize = fontsize
+            fontsize = matplotlib.rcParams['font.size']
         if weight is None:
-            self._weight = matplotlib.rcParams['font.weight']
-        else:
-            self._weight = weight
+            weight = matplotlib.rcParams['font.weight']
         if style is None:
-            self._style = matplotlib.rcParams['font.style']
-        else:
-            self._style = style
+            style = matplotlib.rcParams['font.style']
+
+        self._text_props = {'fontname': fontname,
+
+                            'fontsize': fontsize,
+                            'family': family,
+                            'weight': weight,
+                            'style': style,
+
+                            'color': color,
+                            'rotation': rotation,
+                            'zorder': zorder,
+                            }
+
+        self._width = width
+        self._spacing = spacing
+        self._justify = justify
+
+        self._axes = axes
 
         self._renderer = axes.get_figure().canvas.get_renderer()
         if transform == 'data':
@@ -209,6 +216,7 @@ class ParaMPL:
               color: str | None = None,
               rotation: float | None = None,
               justify: str | None = None,
+              zorder: float | None = None,
 
               ha: str = 'left',
               va: str = 'top',
@@ -252,6 +260,8 @@ Write text into a paragraph
            anticlockwise rotation
         :param justify:
           Line's justification
+        :param zorder:
+          Text's zorder
 
         :param avoid_rectangles:
           whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
@@ -271,37 +281,31 @@ Write text into a paragraph
           Paragraph horizontal alignment
         """
 
+        props = {'fontname': fontname,
+
+                 'fontsize': fontsize,
+                 'family': family,
+                 'weight': weight,
+                 'style': style,
+
+                 'color': color,
+                 'rotation': rotation,
+                 'zorder': zorder,
+                 }
+
+        props = {k: v if v is not None else self._text_props[k]
+                 for k, v in props.items()}
+        rotation = props['rotation']
+
+        # these affect the format of the paragraph
         if width is None:
             width = self._width
-        if justify is None:
-            justify = self._justify
         if spacing is None:
             spacing = self._spacing
-        if fontsize is None:
-            fontsize = self._fontsize
-        if color is None:
-            color = self._color
-        if rotation is None:
-            rotation = self._rotation
-        if family is None:
-            family = self._family
-        if weight is None:
-            weight = self._weight
-        if style is None:
-            style = self._style
-        if fontname is None:
-            fontname_dict = {}
-        else:
-            fontname_dict = {'fontname': self._fontname}
+        if justify is None:
+            justify = self._justify
 
         ax = self._axes
-
-        def write_line(left, bottom, text_in_line, zorder=3):
-
-            ax.text(left, bottom, text_in_line,
-                    fontsize=fontsize, color=color, rotation=rotation,
-                    weight=weight, style=style,
-                    family=family, zorder=zorder, **fontname_dict)
 
         # old artists are already present in the axes and won't be moved by the posteriori vertical alignment
         old_artists = list(ax.texts)
@@ -310,13 +314,13 @@ Write text into a paragraph
             raise NotImplementedError("paraMPL.write() is only available for plots with increasing x- and y-axis")
 
         # word size info
-        widths, height, combined_hash = self._get_widths_height(fontsize, family, fontname,
-                                                                weight, style,
+        widths, height, combined_hash = self._get_widths_height(props,
                                                                 words=text.split())
         space_width = widths[' ']
 
         # initialize position-storing object
-        lp = _line_position(xy, width, height, rotation, spacing, ha, justify,
+        lp = _line_position(xy, width, height,
+                            rotation, spacing, ha, justify,
                             y_to_x_ratio=get_aspect(ax))
         lp.add_avoids(avoid_left_of, avoid_right_of)
 
@@ -334,6 +338,9 @@ Write text into a paragraph
                                            paragraph_per_line=paragraph_per_line,
                                            )
 
+        if props['fontname'] is None:
+            del props['fontname']
+
         for paragraph in paragraphs:
             words = []
             length = 0
@@ -348,10 +355,11 @@ Write text into a paragraph
                             extra_spacing = 0
 
                         offset = 0
-                        for old_word in words:
-                            write_line(*lp.offset(offset=offset),
-                                       old_word)
-                            offset += extra_spacing + space_width + widths[old_word]
+                        for word_out in words:
+                            x, y = lp.offset(offset=offset)
+                            ax.text(x, y, word_out,
+                                    **props)
+                            offset += extra_spacing + space_width + widths[word_out]
 
                         lp.next_line()
                         length = 0
@@ -360,23 +368,27 @@ Write text into a paragraph
                     length += widths[word] + space_width
                     words.append(word)
 
-                write_line(*lp.offset(), ' '.join(words))
+                x, y = lp.offset()
+                ax.text(x, y, ' '.join(words),
+                        **props)
                 lp.next_line()
 
             # if left, right, center justified then write the whole line then move it.
             else:
                 for word in paragraph.split(' '):
                     if length + widths[word] > lp.width_line:
-                        write_line(*lp.offset(justified_length=length - space_width),
-                                   ' '.join(words))
+                        x, y = lp.offset(justified_length=length - space_width)
+                        ax.text(x, y, ' '.join(words),
+                                **props)
                         lp.next_line()
                         length, words = 0, []
 
                     length += widths[word] + space_width
                     words.append(word)
 
-                write_line(*lp.offset(justified_length=length - space_width),
-                           ' '.join(words))
+                x, y = lp.offset(justified_length=length - space_width)
+                ax.text(x, y, ' '.join(words),
+                        **props)
                 lp.next_line()
 
         # get list of artists generated for these paragraphs.
@@ -404,15 +416,15 @@ Write text into a paragraph
 
         return parampl_artists
 
-    def _get_widths_height(self, fontsize, family, fontname,
-                           weight, style,
+    def _get_widths_height(self, props,
                            words: list[str] = None,
                            ):
         text_artist = self._axes.text(0, 0, ' ',
-                                      fontsize=fontsize, fontname=fontname, family=family,
-                                      weight=weight, style=style,
+                                      **props,
                                       )
-        combined_hash = (fontsize, family, fontname, weight, style)
+        combined_hash = (props['fontsize'],
+                         props['family'], props['fontname'],
+                         props['weight'], props['style'])
 
         if combined_hash not in self._widths:
             text_artist.set_text(' ')
@@ -420,7 +432,7 @@ Write text into a paragraph
                                         '': 0,
                                         }
 
-            text_artist.set_text('L')
+            text_artist.set_text('Lg')
             height = self._transformed_artist_extent(text_artist).height
 
             self._widths[combined_hash] = widths
