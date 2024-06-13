@@ -20,6 +20,25 @@ vitae lectus. Duis maximus dui vel mauris varius, lobortis ultricies velit digni
 hendrerit lectus, mattis laoreet quam euismod eget. Donec ullamcorper imperdiet imperdiet.
  """
 
+centered = {'ha': 'center', 'va': 'center',
+            'justify': 'center',
+            }
+bottom = {'ha': 'left', 'va': 'bottom',
+          'justify': 'left',
+          }
+every_line = {'paragraph_per_line': True, }
+every_white = {'collapse_whites': False, }
+big = {'fontsize': 35, 'weight': 'bold', }
+
+mono = {'family': 'monospace', }
+cursive = {'family': 'cursive', }
+
+red = {'color': 'red', }
+blue = {'color': 'blue', }
+
+slanted = {'rotation': 45, }
+vertical = {'rotation': 90, }
+
 f, ax = plt.subplots()
 test_xy = (0.05, 0.95)
 test_width = 0.7
@@ -36,18 +55,15 @@ command2 = f"""para.write(lorem_ipsum, {test_xy},
 eval(command1)
 eval(command2)
 
-para.write(command1 + "\n" + command2, (0.8, 0.1), rotation=90,
-           collapse_whites=False, paragraph_per_line=True,
-           spacing=1.2, va='bottom',
-           family='monospace', color='blue')
+para.write(command1 + "\n" + command2, (0.8, 0.1),
+           spacing=1.2,
+           **mono | blue | vertical | bottom | every_line | every_white,
+           )
 
 para.write("Very Much\nNot\nTop\nSecret", (0.5, 0.5),
-           rotation=45, weight='bold',
-           fontsize=35, width=0.6,
-           ha='center', va='center',
-           collapse_whites=False, paragraph_per_line=True,
-           justify='center', spacing=0.9,
-           family='cursive', color='red')
+           width=0.6, spacing=0.9,
+           **cursive | red | slanted | centered | big | every_line,
+           )
 
 
 f.show()
