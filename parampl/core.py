@@ -186,15 +186,24 @@ class ParaMPL:
         self._rectangles: list[rectangle_specification] = []
 
     def avoid_rectangle(self,
-                        left_right_bottom_top: rectangle_specification,
+                        left: float,
+                        right: float,
+                        bottom: float,
+                        top: float,
                         ):
         """
         Add rectangles to avoid whenever ha='left', va='top', rotation=0 on write()
 
-        :param left_right_bottom_top:
-          specify rectangle limits to avoid
+        :param left:
+          rectangle limits to avoid
+        :param right:
+          rectangle limits to avoid
+        :param bottom:
+          rectangle limits to avoid
+        :param top:
+          rectangle limits to avoid
         """
-        self._rectangles.append(left_right_bottom_top)
+        self._rectangles.append((left, right, bottom, top))
 
     def reset_rectangles(self):
         """Reset avoidance rectangles"""
