@@ -104,6 +104,40 @@ class _line_position:
 
 
 class ParaMPL:
+    """
+    ParaMPL object is able to write justified text for a particular axes.  Default values can be fixed at
+    initialization, but each time the write() method is used the text properties can be changed individually.
+
+    Parameters
+    ----------
+    axes
+      matplotlib.axes.Axes in which to put the paragraphs
+    transform
+      the transform in which the coordinates are given. Currently supported: 'data'
+    width
+       default width
+    spacing
+      default spacing
+    fontname
+       default font name
+    fontsize
+       default fontsize, uses matplotlib's value at initialization if not specified
+    family
+       default font family, uses matplotlib's value at initialization if not specified
+    weight
+       default font weight, uses matplotlib's value at initialization if not specified
+    style
+       default style, uses matplotlib's value at initialization if not specified
+    color
+      default text color
+    rotation
+      default text rotation
+    justify
+      default text justification
+    zorder
+      default zorder
+    """
+
     def __init__(self,
                  axes: Axes,
                  transform: str = 'data',
@@ -122,31 +156,6 @@ class ParaMPL:
                  justify: str = "left",
                  zorder: float | None = 3,
                  ):
-        """
-
-        :param axes:
-          matplotlib.axes.Axes in which to put the paragraphs
-        :param transform:
-          transform in which the coordinates are given. Currently supported: 'data'
-        :param spacing:
-          default spacing
-        :param width:
-           default width
-        :param family:
-           default font name
-        :param family:
-           default font family, uses matplotlib's value at initialization if not specified
-        :param fontsize:
-           default fontsize, uses matplotlib's value at initialization if not specified
-        :param weight:
-           default weight, uses matplotlib's value at initialization if not specified
-        :param style:
-           default style, uses matplotlib's value at initialization if not specified
-        :param color:
-          default color
-        :param zorder:
-          default zorder
-        """
 
         if family is None:
             family = matplotlib.rcParams['font.family'][0]
@@ -194,14 +203,16 @@ class ParaMPL:
         """
         Add rectangles to avoid whenever ha='left', va='top', rotation=0 on write()
 
-        :param left:
-          rectangle limits to avoid
-        :param right:
-          rectangle limits to avoid
-        :param bottom:
-          rectangle limits to avoid
-        :param top:
-          rectangle limits to avoid
+        Parameters
+        ----------
+        left: float
+         left x-limit of the rectangle
+        right: float
+         right x-limit of the rectangle
+        bottom: float
+         bottom y-limit of the rectangle
+        top: float
+         top y-limit of the rectangle
         """
         self._rectangles.append((left, right, bottom, top))
 
@@ -238,56 +249,59 @@ class ParaMPL:
               paragraph_per_line: bool = False,
               ) -> list[matplotlib.artist.Artist]:
         """
-Write text into a paragraph
+Write text into a paragraph, storing word length in dictionary cache. Return a list to all artists
 
-        :rtype:
-          return list of artists with text
-        :param text:
+        Parameters
+        ----------
+        text:
           text to write
-        :param xy:
-           xy to place the paragraph
+        xy:
+           position to place the paragraph aligned according to ha and va
+        width:
+           width of paragraph
+        spacing
+           line spacing of paragraph
 
-        :param width:
-          use this width instead of the initialized one
-        :param spacing:
-          use this spacing instead of the initialized one
-
-        :param fontsize:
-          use this fontsize instead of the initialized one
-        :param fontname:
+        fontname:
           specific fontname, if not specified then use family
-        :param family:
+        fontsize:
+          use this fontsize instead of the initialized one
+        family:
           family of the font
-        :param weight:
+        weight:
            font weight
-        :param style:
+        style:
           font style
-
-        :param color:
+        color:
           color of text
-        :param rotation:
+        rotation:
            anticlockwise rotation
-        :param justify:
+        justify:
           Line's justification
-        :param zorder:
+        zorder:
           Text's zorder
 
-        :param avoid_rectangles:
-          whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
-        :param collapse_whites:
-          whether multiple side-by-side withes should be considered as one
-        :param paragraph_per_line:
-          if true, each new line is considered a new paragraph
+        ha:
+          Paragraph horizontal alignment
+        va:
+          Paragraph vertical alignment
 
-        :param avoid_left_of:
-          tuple (x_lim, (y1, y2)). Avoid space left of x_lim between y1 and y2
-        :param avoid_right_of:
+        avoid_left_of: avoid_specification
+           tuple (x_lim, (y1, y2)). Avoid space left of x_lim between y1 and y2
+        avoid_right_of: avoid_specification
           tuple (x_lim, (y1, y2)). Avoid space right of x_lim between y1 and y2
 
-        :param va:
-          Paragraph vertical alignment
-        :param ha:
-          Paragraph horizontal alignment
+        avoid_rectangles
+          whether to avoid specified rectangles (in any case, it only works if va=top, ha=left, rotation=0)
+        collapse_whites
+          whether multiple side-by-side withes should be considered as one
+        paragraph_per_line
+          if true, each new line is considered a new paragraph
+
+        Returns
+        -------
+        list[Artist]
+
         """
 
         props = {'fontname': fontname,
