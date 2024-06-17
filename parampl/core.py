@@ -194,6 +194,10 @@ class ParaMPL:
         self._heights: dict[tuple, float] = {}
         self._rectangles: list[rectangle_specification] = []
 
+    def get_axes(self):
+        """Return matplotlib axes being used"""
+        return self._axes
+
     def avoid_rectangle(self,
                         left: float,
                         right: float,
