@@ -70,11 +70,11 @@ class _line_position:
 
         self.add_avoids(avoid_left, avoid_right)
 
-    def add_avoids(self, avoid_left_of, avoid_right_of):
+    def add_avoids(self, avoid_left_of, avoid_right_of, initialize=False):
         if avoid_left_of is not None or avoid_right_of is not None:
             self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
 
-            self.check_next_border(force=True)
+            self.check_next_border(force=initialize)
 
     def offset(self,
                offset: float = 0,
@@ -349,7 +349,7 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         lp = _line_position(xy, width, height,
                             rotation, spacing, ha, justify,
                             y_to_x_ratio=get_aspect(ax))
-        lp.add_avoids(avoid_left_of, avoid_right_of)
+        lp.add_avoids(avoid_left_of, avoid_right_of, initialize=True)
 
         # add rectangles to avoid if orientation and alignment is adequate
         if va == 'top' and rotation == 0 and ha == 'left':
