@@ -251,7 +251,7 @@ class ParaMPL:
 
               collapse_whites: bool = True,
               paragraph_per_line: bool = False,
-              ) -> list[matplotlib.artist.Artist]:
+              ) -> tuple[list[matplotlib.artist.Artist], float]:
         """
 Write text into a paragraph, storing word length in dictionary cache. Return a list to all artists
 
@@ -441,7 +441,7 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         else:
             raise ValueError(f"invalid va '{va}'. Must be 'top', 'bottom', or 'center'")
 
-        return parampl_artists
+        return parampl_artists, total_height
 
     def _get_widths_height(self, props,
                            words: list[str] = None,
