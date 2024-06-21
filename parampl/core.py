@@ -232,8 +232,8 @@ class ParaMPL:
            self
         """
 
-        return self.avoid_rectangle_limits(left, bottom,
-                                           left + width, bottom + height)
+        return self.avoid_rectangle_limits(left, left + width,
+                                           bottom, bottom + height)
 
     def avoid_rectangle_limits(self,
                                left: float,
