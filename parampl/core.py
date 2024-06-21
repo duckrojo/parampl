@@ -66,6 +66,11 @@ class _line_position:
         for left, right, bottom, top in rectangles:
             left_space = left - x
             right_space = x + w - right
+            if left_space <= 0 and right_space <= 0:
+                print(f"Rectangle with limits ({left:.2g}, {right:.2g}, {bottom:2g}, {top:.2g}) leaves no writable "
+                      f"space when starting at x: {x} and width: {w}. \n Since it is not yet supported to skip "
+                      f"a horizontally-spanning slab, this rectangle is ignored.")
+                continue
             if left_space < right_space:
                 avoid_left.append((right, (bottom, top)))
             else:
@@ -77,8 +82,8 @@ class _line_position:
         if avoid_left_of is not None or avoid_right_of is not None:
             self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
 
-            self.check_next_border(force=initialize)
-            pass
+        self.check_next_border(force=initialize)
+        pass
 
     def offset(self,
                offset: float = 0,
@@ -204,10 +209,38 @@ class ParaMPL:
 
     def avoid_rectangle(self,
                         left: float,
-                        right: float,
                         bottom: float,
-                        top: float,
+                        width: float,
+                        height: float,
                         ):
+        """
+        add rectangles to avoid based on its dimensions
+
+        Parameters
+        ----------
+        left
+          horizontal left limit
+        bottom
+          vertical bottom limit
+        width
+          rectangle's width
+        height
+          rectangle's height
+
+        Returns
+        -------
+           self
+        """
+
+        return self.avoid_rectangle_limits(left, bottom,
+                                           left + width, bottom + height)
+
+    def avoid_rectangle_limits(self,
+                               left: float,
+                               right: float,
+                               bottom: float,
+                               top: float,
+                               ):
         """
         Add rectangles to avoid whenever ha='left', va='top', rotation=0 on write()
 
@@ -224,9 +257,13 @@ class ParaMPL:
         """
         self._rectangles.append((left, right, bottom, top))
 
+        return self
+
     def reset_rectangles(self):
         """Reset avoidance rectangles"""
         self._rectangles = []
+
+        return self
 
     def write(self,
               text: str,

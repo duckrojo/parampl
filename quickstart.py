@@ -44,7 +44,7 @@ test_xy = (0.05, 0.95)
 test_width = 0.7
 para = ParaMPL(ax, spacing=0.3, fontsize=7)
 
-command1 = f"""para.avoid_rectangle(0.6, 1, 0.6, 0.8)"""
+command1 = f"""para.avoid_rectangle_limits(0.6, 1, 0.6, 0.8)"""
 command2 = f"""para.write(lorem_ipsum, {test_xy},
            avoid_left_of=[(0.15, (0.3, 0.7)),
                                  (0.3, (0.4, 0.5))],
