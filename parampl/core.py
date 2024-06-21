@@ -11,6 +11,9 @@ __all__ = ['ParaMPL', 'avoid_specification', 'avoid_single_specification']
 
 
 class _line_position:
+    def __repr__(self):
+        return f"Line's position currently at {self.x}, {self.y}: borders: {self.borders}"
+
     def __init__(self,
                  xy,
                  width, height,
@@ -75,6 +78,7 @@ class _line_position:
             self.borders = parse_avoid(self.borders, avoid_left_of, avoid_right_of, self.height)
 
             self.check_next_border(force=initialize)
+            pass
 
     def offset(self,
                offset: float = 0,
@@ -349,7 +353,6 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         lp = _line_position(xy, width, height,
                             rotation, spacing, ha, justify,
                             y_to_x_ratio=get_aspect(ax))
-        lp.add_avoids(avoid_left_of, avoid_right_of, initialize=True)
 
         # add rectangles to avoid if orientation and alignment is adequate
         if va == 'top' and rotation == 0 and ha == 'left':
@@ -358,6 +361,8 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         # if orientation is not adequate, but avoid is specified raise error
         elif avoid_left_of is not None or avoid_right_of is not None:
             raise ValueError("if using avoid areas, then va='top', ha='left', and rotation=0 are required")
+
+        lp.add_avoids(avoid_left_of, avoid_right_of, initialize=True)
 
         # separate and process paragraphs one at a time.
         paragraphs = split_into_paragraphs(text,
