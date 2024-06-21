@@ -191,6 +191,8 @@ class ParaMPL:
         self._spacing = spacing
         self._justify = justify
 
+        self.leftover: str = ""
+
         self._axes = axes
 
         self._renderer = axes.get_figure().canvas.get_renderer()
@@ -271,6 +273,7 @@ class ParaMPL:
 
               width: float | None = None,
               spacing: float | None = None,
+              max_height: float | None = None,
 
               fontname: str | None = None,
               fontsize: float | None = None,
@@ -306,6 +309,8 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
            width of paragraph
         spacing
            line spacing of paragraph
+        max_height:
+           maximum height of paragraph, remaining characters are stored in .leftover attribute
 
         fontname:
           specific fontname, if not specified then use family
@@ -410,13 +415,13 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         if props['fontname'] is None:
             del props['fontname']
 
-        for paragraph in paragraphs:
+        for idx_paragraph, paragraph in enumerate(paragraphs):
             words = []
             length = 0
 
             # if full justified add word-by-word size and when line is completed, fill with space
             if justify == 'full':
-                for word in paragraph.split(' '):
+                for idx, word in enumerate(paragraph.split(' ')):
                     if length + widths[word] > lp.width_line:
                         if len(words) > 1:
                             extra_spacing = (lp.width_line - length + space_width) / (len(words) - 1)
@@ -430,6 +435,16 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                                     **props)
                             offset += extra_spacing + space_width + widths[word_out]
 
+                        if (max_height is not None
+                            and lp.total_height() - lp.delta_y > max_height):
+
+                            paragraph_sep = "\n" if paragraph_per_line else "\n\n"
+                            self.leftover = paragraph_sep.join([" ".join([word] +
+                                                                         paragraph.split(' ')[idx + 1:]
+                                                                         )] +
+                                                               paragraphs[idx_paragraph + 1:])
+                            return self._artists_and_vertical_align(old_artists, lp, va)
+
                         lp.next_line()
                         length = 0
                         words = []
@@ -437,20 +452,33 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                     length += widths[word] + space_width
                     words.append(word)
 
-                x, y = lp.offset()
-                ax.text(x, y, ' '.join(words),
-                        **props)
-                lp.next_line()
+                # if for reaches the end (no max_height)
+                else:
+                    x, y = lp.offset()
+                    ax.text(x, y, ' '.join(words),
+                            **props)
+                    lp.next_line()
+                    self.leftover = ""
 
             # if left, right, center justified then write the whole line then move it.
             else:
-                for word in paragraph.split(' '):
+                for idx, word in enumerate(paragraph.split(' ')):
                     if length + widths[word] > lp.width_line:
                         x, y = lp.offset(justified_length=length - space_width)
                         ax.text(x, y, ' '.join(words),
                                 **props)
                         lp.next_line()
                         length, words = 0, []
+
+                        if max_height is not None and lp.total_height() - lp.delta_y > max_height:
+
+                            paragraph_sep = "\n" if paragraph_per_line else "\n\n"
+                            self.leftover = paragraph_sep.join([word] +
+                                                               [" ".join([word] +
+                                                                         paragraph.split(' ')[idx + 1:]
+                                                                         )] +
+                                                               paragraphs[idx_paragraph + 1:])
+                            return self._artists_and_vertical_align(old_artists, lp, va)
 
                     length += widths[word] + space_width
                     words.append(word)
@@ -460,6 +488,10 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                         **props)
                 lp.next_line()
 
+        return self._artists_and_vertical_align(old_artists, lp, va)
+
+    def _artists_and_vertical_align(self, old_artists, lp, va):
+        ax = self._axes
         # get list of artists generated for these paragraphs.
         parampl_artists = [artist for artist in ax.texts if artist not in old_artists]
 

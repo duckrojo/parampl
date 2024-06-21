@@ -65,5 +65,4 @@ para.write("Very Much\nNot\nTop\nSecret", (0.5, 0.5),
            **cursive | red | slanted | centered | big | every_line,
            )
 
-
 f.show()
