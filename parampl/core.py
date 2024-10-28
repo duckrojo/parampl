@@ -267,6 +267,21 @@ class ParaMPL:
 
         return self
 
+    def _check_max_leftover(self, max_height, paragraph_sep, lp,
+                            left_words=None, left_paragraphs=None):
+        check = max_height is not None and lp.total_height() - lp.delta_y > max_height
+
+        if check:
+            if left_words is None:
+                left_words = []
+            if left_paragraphs is None:
+                left_paragraphs = []
+
+            self.leftover = paragraph_sep.join([" ".join(left_words)] +
+                                               left_paragraphs)
+
+        return check
+
     def write(self,
               text: str,
               xy: tuple[float, float],
@@ -353,6 +368,7 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         list[Artist]
 
         """
+        # todo: optimize max_height
 
         props = {'fontname': fontname,
 
@@ -407,10 +423,10 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
         lp.add_avoids(avoid_left_of, avoid_right_of, initialize=True)
 
         # separate and process paragraphs one at a time.
-        paragraphs = split_into_paragraphs(text,
-                                           collapse_whites=collapse_whites,
-                                           paragraph_per_line=paragraph_per_line,
-                                           )
+        paragraphs, paragraph_sep = split_into_paragraphs(text,
+                                                          collapse_whites=collapse_whites,
+                                                          paragraph_per_line=paragraph_per_line,
+                                                          )
 
         if props['fontname'] is None:
             del props['fontname']
@@ -421,7 +437,8 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
 
             # if full justified add word-by-word size and when line is completed, fill with space
             if justify == 'full':
-                for idx, word in enumerate(paragraph.split(' ')):
+                incoming_words = paragraph.split(' ')
+                for idx, word in enumerate(incoming_words):
                     if length + widths[word] > lp.width_line:
                         if len(words) > 1:
                             extra_spacing = (lp.width_line - length + space_width) / (len(words) - 1)
@@ -431,18 +448,13 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                         offset = 0
                         for word_out in words:
                             x, y = lp.offset(offset=offset)
-                            ax.text(x, y, word_out,
-                                    **props)
+                            ax.text(x, y, word_out, **props)
                             offset += extra_spacing + space_width + widths[word_out]
 
-                        if (max_height is not None
-                            and lp.total_height() - lp.delta_y > max_height):
-
-                            paragraph_sep = "\n" if paragraph_per_line else "\n\n"
-                            self.leftover = paragraph_sep.join([" ".join([word] +
-                                                                         paragraph.split(' ')[idx + 1:]
-                                                                         )] +
-                                                               paragraphs[idx_paragraph + 1:])
+                        if self._check_max_leftover(max_height, paragraph_sep, lp,
+                                                    left_words=incoming_words[idx:],
+                                                    left_paragraphs=paragraphs[idx_paragraph + 1:]
+                                                    ):
                             return self._artists_and_vertical_align(old_artists, lp, va)
 
                         lp.next_line()
@@ -457,6 +469,12 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                     x, y = lp.offset()
                     ax.text(x, y, ' '.join(words),
                             **props)
+
+                    if self._check_max_leftover(max_height, paragraph_sep, lp,
+                                                left_paragraphs=paragraphs[idx_paragraph + 1:]
+                                                ):
+                        return self._artists_and_vertical_align(old_artists, lp, va)
+
                     lp.next_line()
                     self.leftover = ""
 
@@ -470,14 +488,10 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                         lp.next_line()
                         length, words = 0, []
 
-                        if max_height is not None and lp.total_height() - lp.delta_y > max_height:
-
-                            paragraph_sep = "\n" if paragraph_per_line else "\n\n"
-                            self.leftover = paragraph_sep.join([word] +
-                                                               [" ".join([word] +
-                                                                         paragraph.split(' ')[idx + 1:]
-                                                                         )] +
-                                                               paragraphs[idx_paragraph + 1:])
+                        if self._check_max_leftover(max_height, paragraph_sep, lp,
+                                                    left_words=paragraph.split(' ')[idx+1:],
+                                                    left_paragraphs=paragraphs[idx_paragraph + 1:]
+                                                    ):
                             return self._artists_and_vertical_align(old_artists, lp, va)
 
                     length += widths[word] + space_width
@@ -486,6 +500,12 @@ Write text into a paragraph, storing word length in dictionary cache. Return a l
                 x, y = lp.offset(justified_length=length - space_width)
                 ax.text(x, y, ' '.join(words),
                         **props)
+
+                if self._check_max_leftover(max_height, paragraph_sep, lp,
+                                            left_paragraphs=paragraphs[idx_paragraph + 1:]
+                                            ):
+                    return self._artists_and_vertical_align(old_artists, lp, va)
+
                 lp.next_line()
 
         return self._artists_and_vertical_align(old_artists, lp, va)

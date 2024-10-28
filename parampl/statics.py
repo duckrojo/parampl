@@ -29,7 +29,7 @@ def split_into_paragraphs(text, collapse_whites=True, paragraph_per_line=False):
 
     ret = [pre_process(para, split_words)
            for para in re.split(f'{split_paragraph}+', text)]
-    return ret
+    return ret, split_paragraph
 
 
 def get_aspect(ax):
